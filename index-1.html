@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Sleep System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --night:#050810; --star:#c8d8ff; --moon:#e8eeff; --gold:#d4a853;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{
+  height:100%;width:100%;
+  background:var(--night);color:var(--moon);
+  font-family:'DM Sans',sans-serif;font-weight:300;
+  overflow:hidden;user-select:none;-webkit-user-select:none;
+}
+
+/* ── CANVAS ── */
+#starfield{position:fixed;inset:0;z-index:0;}
+
+/* ── SCREENS ── */
+.screen{
+  position:fixed;inset:0;z-index:10;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:40px 28px;
+  opacity:0;pointer-events:none;
+  transition:opacity 1s ease;
+}
+.screen.active{opacity:1;pointer-events:all;}
+
+/* ══ HOME ══ */
+#s-home{background:radial-gradient(ellipse 80% 60% at 50% 65%,#0d1c3a,var(--night));}
+
+.moon-orb{
+  width:100px;height:100px;border-radius:50%;
+  background:radial-gradient(circle at 38% 35%,#f0f4ff,#c8d4ff 40%,#7080b0);
+  box-shadow:0 0 60px rgba(180,200,255,.26),0 0 120px rgba(140,160,255,.1),
+             inset -16px -12px 32px rgba(0,0,60,.42);
+  margin-bottom:36px;
+  animation:mf 6s ease-in-out infinite;
+}
+@keyframes mf{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+
+.brand{font-size:10px;letter-spacing:5px;text-transform:uppercase;color:var(--gold);margin-bottom:12px;}
+.home-h1{
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(34px,8.5vw,52px);
+  font-weight:300;line-height:1.1;text-align:center;margin-bottom:10px;
+}
+.home-h1 em{font-style:italic;color:var(--star);}
+.home-sub{
+  font-size:13px;color:rgba(200,216,255,.5);text-align:center;
+  max-width:260px;line-height:1.65;margin-bottom:32px;
+}
+
+/* sound selector */
+.sound-row{
+  display:flex;gap:6px;margin-bottom:28px;flex-wrap:wrap;justify-content:center;
+}
+.sound-btn{
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(180,200,255,.1);
+  color:rgba(200,216,255,.45);
+  font-family:'DM Sans',sans-serif;font-size:10px;letter-spacing:.5px;
+  padding:7px 14px;border-radius:100px;cursor:pointer;transition:all .25s;
+}
+.sound-btn:hover{border-color:rgba(180,200,255,.25);color:rgba(200,216,255,.75);}
+.sound-btn.sel{
+  background:rgba(212,168,83,.1);border-color:rgba(212,168,83,.35);
+  color:var(--gold);
+}
+
+.btn-primary{
+  background:linear-gradient(135deg,#2a4a8a,#162850);
+  border:1px solid rgba(180,200,255,.2);
+  color:var(--moon);font-family:'DM Sans',sans-serif;
+  font-size:15px;font-weight:400;letter-spacing:.8px;
+  padding:20px 48px;border-radius:100px;
+  width:100%;max-width:310px;cursor:pointer;
+  box-shadow:0 8px 40px rgba(60,100,200,.2);
+  margin-bottom:10px;
+  transition:transform .3s,box-shadow .3s;
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 50px rgba(60,100,200,.3);}
+.btn-primary:active{transform:translateY(0);}
+
+/* mode night button */
+.btn-night{
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(180,200,255,.1);
+  color:rgba(200,216,255,.45);
+  font-family:'DM Sans',sans-serif;font-size:13px;letter-spacing:.3px;
+  padding:14px 32px;border-radius:100px;
+  width:100%;max-width:310px;cursor:pointer;
+  margin-bottom:14px;
+  transition:all .3s;
+}
+.btn-night:hover{border-color:rgba(180,200,255,.22);color:rgba(200,216,255,.7);}
+
+/* secondary links */
+.home-links{display:flex;gap:20px;align-items:center;}
+.btn-ghost{
+  background:transparent;border:none;
+  color:rgba(200,216,255,.3);font-family:'DM Sans',sans-serif;
+  font-size:11px;letter-spacing:.3px;cursor:pointer;padding:6px 12px;
+  transition:color .3s;
+}
+.btn-ghost:hover{color:rgba(200,216,255,.6);}
+.link-sep{color:rgba(200,216,255,.15);font-size:11px;}
+
+/* voice test feedback */
+.voice-status{
+  font-size:11px;color:rgba(212,168,83,.7);letter-spacing:.5px;
+  height:16px;margin-top:-8px;margin-bottom:12px;
+  transition:opacity .4s;
+}
+
+/* ══ BREATHE ══ */
+#s-breathe{background:radial-gradient(ellipse 110% 110% at 50% 50%,#080f20,var(--night));}
+
+.phase-tag{
+  font-size:9px;letter-spacing:4px;text-transform:uppercase;
+  color:var(--gold);opacity:.72;margin-bottom:9px;height:12px;
+}
+.phase-name{
+  font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;
+  font-style:italic;color:var(--star);margin-bottom:36px;
+  text-align:center;min-height:32px;transition:opacity 1.5s;
+}
+
+.orb-wrap{
+  position:relative;width:210px;height:210px;margin-bottom:32px;
+  display:flex;align-items:center;justify-content:center;
+}
+.orb-ring{position:absolute;border-radius:50%;border:1px solid rgba(100,140,255,.12);}
+.orb-ring:nth-child(1){width:100%;height:100%;animation:rp 8s ease-in-out infinite;}
+.orb-ring:nth-child(2){width:78%;height:78%;animation:rp 8s ease-in-out infinite .6s;}
+@keyframes rp{0%,100%{transform:scale(1);opacity:.2}50%{transform:scale(1.04);opacity:.5}}
+
+.orb{
+  width:138px;height:138px;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%,#3a5a9a,#192d60 55%,#0d1830);
+  box-shadow:0 0 40px rgba(60,100,200,.26);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;z-index:2;
+}
+.orb-label{
+  font-family:'DM Sans',sans-serif;font-size:10px;letter-spacing:2px;
+  text-transform:uppercase;color:rgba(200,216,255,.4);
+  transition:opacity .3s;
+}
+
+.instr{
+  font-family:'Cormorant Garamond',serif;font-size:21px;font-style:italic;
+  color:rgba(200,216,255,.48);min-height:28px;margin-bottom:28px;
+  text-align:center;transition:opacity .6s;
+}
+
+.prog-wrap{width:100%;max-width:280px;margin-bottom:24px;}
+.prog-bars{display:flex;gap:5px;margin-bottom:6px;}
+.prog-bar{flex:1;height:2px;background:rgba(100,140,255,.1);border-radius:1px;overflow:hidden;}
+.prog-fill{height:100%;width:0%;border-radius:1px;
+           background:linear-gradient(90deg,#4a6fa5,#7aa0ff);transition:width .5s linear;}
+.prog-bar.done   .prog-fill{width:100%;}
+.prog-bar.active .prog-fill{background:var(--gold);}
+.prog-labels{display:flex;gap:5px;}
+.prog-lbl{flex:1;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;
+          color:rgba(200,216,255,.2);text-align:center;}
+.prog-lbl.active{color:var(--gold);}
+
+.btn-stop{
+  background:transparent;border:1px solid rgba(200,216,255,.09);
+  color:rgba(200,216,255,.25);font-family:'DM Sans',sans-serif;
+  font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  padding:10px 24px;border-radius:100px;cursor:pointer;transition:all .3s;
+}
+.btn-stop:hover{color:rgba(200,216,255,.5);border-color:rgba(200,216,255,.2);}
+
+/* big count bg */
+#big-count{
+  position:fixed;inset:0;z-index:1;
+  display:flex;align-items:center;justify-content:center;
+  pointer-events:none;
+  font-family:'Cormorant Garamond',serif;font-size:32vw;font-weight:300;
+  color:rgba(200,216,255,.06);
+  opacity:0;transition:opacity 1.5s;
+}
+
+/* dimmer */
+#dimmer{
+  position:fixed;inset:0;z-index:5;
+  background:var(--night);opacity:0;pointer-events:none;
+  transition:opacity 1s;
+}
+
+/* ══ END ══ */
+#s-end{background:radial-gradient(ellipse 70% 60% at 50% 50%,#060f1f,var(--night));}
+.end-moon{font-size:48px;margin-bottom:18px;opacity:.6;}
+.end-h{
+  font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;
+  font-style:italic;color:var(--star);margin-bottom:9px;
+}
+.end-p{
+  font-size:13px;color:rgba(200,216,255,.38);text-align:center;
+  max-width:240px;line-height:1.7;margin-bottom:36px;
+}
+
+/* ══ EBOOK ══ */
+#s-ebook{
+  align-items:flex-start;justify-content:flex-start;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:52px 24px 80px;
+  background:radial-gradient(ellipse 90% 70% at 50% 30%,#0a1225,var(--night));
+}
+.eb-inner{width:100%;max-width:380px;margin:0 auto;}
+.eb-badge{
+  display:inline-block;background:rgba(212,168,83,.1);
+  border:1px solid rgba(212,168,83,.28);color:var(--gold);
+  font-size:9px;letter-spacing:3px;text-transform:uppercase;
+  padding:6px 14px;border-radius:100px;margin-bottom:18px;
+}
+.eb-h{
+  font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:300;
+  line-height:1.15;margin-bottom:10px;
+}
+.eb-h em{font-style:italic;color:var(--star);}
+.eb-sub{font-size:13px;color:rgba(200,216,255,.42);line-height:1.6;margin-bottom:34px;}
+.ch{
+  background:rgba(255,255,255,.03);border:1px solid rgba(180,200,255,.07);
+  border-radius:12px;padding:15px 17px;display:flex;gap:13px;margin-bottom:2px;
+}
+.ch-n{
+  font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;
+  color:rgba(200,216,255,.12);min-width:22px;line-height:1;
+}
+.ch-t{font-size:13px;color:var(--star);margin-bottom:3px;}
+.ch-d{font-size:11px;color:rgba(200,216,255,.37);line-height:1.5;}
+.price-box{
+  margin-top:26px;
+  background:linear-gradient(135deg,rgba(26,48,96,.5),rgba(13,21,48,.5));
+  border:1px solid rgba(180,200,255,.12);border-radius:16px;
+  padding:26px 20px;text-align:center;
+}
+.p-old{font-size:12px;color:rgba(200,216,255,.26);text-decoration:line-through;margin-bottom:3px;}
+.p-new{font-family:'Cormorant Garamond',serif;font-size:52px;font-weight:300;color:var(--moon);line-height:1;}
+.p-new sup{font-size:21px;vertical-align:top;margin-top:11px;}
+.p-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin:4px 0 20px;}
+.btn-buy{
+  width:100%;background:linear-gradient(135deg,#c8a040,#9c7418);
+  border:none;color:#1a0e00;font-family:'DM Sans',sans-serif;
+  font-size:14px;font-weight:400;letter-spacing:.8px;
+  padding:18px;border-radius:100px;cursor:pointer;
+  box-shadow:0 4px 20px rgba(212,168,83,.2);margin-bottom:11px;
+  transition:transform .25s,box-shadow .25s;
+}
+.btn-buy:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(212,168,83,.3);}
+.p-guar{font-size:10px;color:rgba(200,216,255,.26);}
+
+/* audio dot */
+.audio-dot{
+  position:fixed;top:20px;right:20px;z-index:200;
+  width:8px;height:8px;border-radius:50%;
+  background:rgba(200,216,255,.16);cursor:pointer;transition:background .3s;
+}
+.audio-dot.on{background:var(--gold);animation:adot 2s ease-in-out infinite;}
+@keyframes adot{0%,100%{box-shadow:0 0 4px rgba(212,168,83,.3)}50%{box-shadow:0 0 12px rgba(212,168,83,.6)}}
+</style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+<div id="dimmer"></div>
+<div id="big-count"></div>
+<div class="audio-dot" id="audioDot"></div>
+
+<!-- ══ HOME ══ -->
+<div class="screen active" id="s-home">
+  <div class="moon-orb"></div>
+  <div class="brand">Sleep System</div>
+  <h1 class="home-h1">Laisse le sommeil<br><em>venir naturellement</em></h1>
+  <p class="home-sub">Respiration guidée · Voix douce · Sans effort</p>
+
+  <!-- Sound selector -->
+  <div class="sound-row">
+    <button class="sound-btn sel" data-sound="white">Bruit blanc</button>
+    <button class="sound-btn"    data-sound="rain">Pluie douce</button>
+    <button class="sound-btn"    data-sound="wind">Vent léger</button>
+    <button class="sound-btn"    data-sound="off">Silence</button>
+  </div>
+
+  <button class="btn-primary" id="btnStart">S'endormir maintenant</button>
+  <p style="font-size:11px;color:rgba(200,216,255,.32);letter-spacing:.3px;margin-top:-6px;margin-bottom:5px;">Aucune réflexion. Juste suivre.</p>
+  <p style="font-size:10px;color:rgba(200,216,255,.2);letter-spacing:.3px;font-style:italic;margin-bottom:18px;">Beaucoup de personnes s'endorment avant la fin.</p>
+  <button class="btn-night"   id="btnNight">🌙&nbsp;&nbsp;Je me suis réveillé la nuit</button>
+
+  <div class="voice-status" id="voiceStatus"></div>
+
+  <div class="home-links">
+    <button class="btn-ghost" id="btnVoiceTest">Tester la voix</button>
+    <span class="link-sep">·</span>
+    <button class="btn-ghost" id="btnEbook">Méthode complète</button>
+  </div>
+  <p id="wakeLockHint" style="display:none;font-size:10px;color:rgba(200,216,255,.2);text-align:center;max-width:260px;margin-top:14px;line-height:1.5;">Pour une meilleure expérience, désactive la mise en veille automatique.</p>
+</div>
+
+<!-- ══ BREATHE ══ -->
+<div class="screen" id="s-breathe">
+  <div class="phase-tag"  id="phaseTag">Phase 1</div>
+  <div class="phase-name" id="phaseName">Soupir cyclique</div>
+
+  <div class="orb-wrap">
+    <div class="orb-ring"></div>
+    <div class="orb-ring"></div>
+    <div class="orb" id="orb">
+      <div class="orb-label" id="orbLbl">prêt</div>
+    </div>
+  </div>
+
+  <div class="instr" id="instr"></div>
+
+  <div class="prog-wrap">
+    <div class="prog-bars" id="progBars"></div>
+    <div class="prog-labels" id="progLabels"></div>
+  </div>
+
+  <button class="btn-stop" id="btnStop">Arrêter</button>
+</div>
+
+<!-- ══ END ══ -->
+<div class="screen" id="s-end">
+  <div class="end-moon">🌙</div>
+  <div class="end-h">Bonne nuit…</div>
+  <p class="end-p">Laisse le sommeil venir.<br>Tu n'as rien à faire.</p>
+  <button class="btn-primary" id="btnRestart" style="margin-bottom:12px">Recommencer</button>
+  <button class="btn-ghost"   id="btnEbook2">Découvrir la méthode →</button>
+</div>
+
+<!-- ══ EBOOK ══ -->
+<div class="screen" id="s-ebook">
+  <div class="eb-inner">
+    <div class="eb-badge">Méthode complète</div>
+    <h2 class="eb-h">Le <em>Sleep System</em><br>en profondeur</h2>
+    <p class="eb-sub">Le guide qui explique pourquoi ça marche — et comment aller encore plus loin.</p>
+    <div class="ch"><div class="ch-n">1</div><div><div class="ch-t">Pourquoi tu n'arrives pas à dormir</div><div class="ch-d">La vraie raison (ce n'est pas le stress) et comment y remédier.</div></div></div>
+    <div class="ch"><div class="ch-n">2</div><div><div class="ch-t">Le système d'endormissement rapide</div><div class="ch-d">Le protocole exact utilisé dans l'app, expliqué étape par étape.</div></div></div>
+    <div class="ch"><div class="ch-n">3</div><div><div class="ch-t">Les 7 erreurs qui t'empêchent de dormir</div><div class="ch-d">Forcer le sommeil, trop penser, mauvaise respiration…</div></div></div>
+    <div class="ch"><div class="ch-n">4</div><div><div class="ch-t">La routine complète du soir</div><div class="ch-d">30 minutes qui transforment ta nuit.</div></div></div>
+    <div class="ch"><div class="ch-n">5</div><div><div class="ch-t">Mode urgence</div><div class="ch-d">Insomnie, stress extrême — le protocole de secours immédiat.</div></div></div>
+    <br>
+    <button class="btn-ghost" id="btnBack" style="width:100%;text-align:center;margin-top:6px">← Retour</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ══════════════════════════════
+   STARFIELD
+══════════════════════════════ */
+const CV = document.getElementById('starfield');
+const CX = CV.getContext('2d');
+let stars=[], starsAlpha=1;
+function buildStars(){
+  stars=Array.from({length:180},()=>({
+    x:Math.random()*CV.width, y:Math.random()*CV.height,
+    r:Math.random()*1.1+0.2, ph:Math.random()*Math.PI*2,
+    sp:Math.random()*.006+.002, dr:(Math.random()-.5)*.04
+  }));
+}
+function resizeCV(){ CV.width=innerWidth; CV.height=innerHeight; buildStars(); }
+resizeCV(); window.addEventListener('resize',resizeCV);
+(function loop(){
+  CX.clearRect(0,0,CV.width,CV.height);
+  stars.forEach(s=>{
+    s.ph+=s.sp; s.x=(s.x+s.dr+CV.width)%CV.width;
+    const a=((Math.sin(s.ph)+1)/2)*.62+.07;
+    CX.beginPath(); CX.arc(s.x,s.y,s.r,0,Math.PI*2);
+    CX.fillStyle=`rgba(200,216,255,${(a*starsAlpha).toFixed(3)})`; CX.fill();
+  });
+  requestAnimationFrame(loop);
+})();
+
+
+/* ══════════════════════════════
+   SCREEN MANAGER
+══════════════════════════════ */
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+
+/* ══════════════════════════════
+   AMBIENT AUDIO ENGINE
+   Supports: white noise, rain,
+   wind (all synthesized via Web
+   Audio — no external files)
+══════════════════════════════ */
+let AC=null, masterGain=null, noiseNode=null, ambOn=false;
+let currentSound='white';
+const audioDot=document.getElementById('audioDot');
+
+function ensureAC(){
+  if(AC) return;
+  AC=new (window.AudioContext||window.webkitAudioContext)();
+  masterGain=AC.createGain(); masterGain.gain.value=0;
+  masterGain.connect(AC.destination);
+}
+function resumeAC(){
+  // iOS requires .resume() called inside a user gesture tick
+  if(AC && AC.state==='suspended') AC.resume();
+}
+
+function buildNoiseSource(type){
+  // All sounds are shaped brown/white noise + filtering
+  const buf=AC.createScriptProcessor(4096,1,1);
+  let last=0, last2=0;
+  buf.onaudioprocess=e=>{
+    const o=e.outputBuffer.getChannelData(0);
+    for(let i=0;i<4096;i++){
+      const w=Math.random()*2-1;
+      if(type==='white'){
+        o[i]=w*.18;
+      } else if(type==='rain'){
+        // brown + resonant filter feel
+        last=(last+.02*w)/1.02; o[i]=last*4;
+      } else if(type==='wind'){
+        // smoother low brown
+        last=(last+.008*w)/1.008;
+        last2=(last2+.04*(last-last2));
+        o[i]=last2*6;
+      }
+    }
+  };
+
+  if(type==='rain'){
+    const filt=AC.createBiquadFilter();
+    filt.type='bandpass'; filt.frequency.value=800; filt.Q.value=0.3;
+    buf.connect(filt); filt.connect(masterGain);
+  } else if(type==='wind'){
+    const filt=AC.createBiquadFilter();
+    filt.type='lowpass'; filt.frequency.value=320; filt.Q.value=0.8;
+    buf.connect(filt); filt.connect(masterGain);
+  } else {
+    buf.connect(masterGain);
+  }
+  return buf;
+}
+
+function ambStart(){
+  if(currentSound==='off') return;
+  ensureAC();
+  resumeAC(); // must happen synchronously inside gesture on iOS
+  ambOn=true; audioDot.classList.add('on');
+  // Build noise source in next tick (heavy work, doesn't need gesture context)
+  setTimeout(()=>{
+    if(!ambOn) return;
+    if(noiseNode){ try{noiseNode.disconnect();}catch(e){} }
+    noiseNode=buildNoiseSource(currentSound);
+    masterGain.gain.cancelScheduledValues(AC.currentTime);
+    masterGain.gain.setValueAtTime(0, AC.currentTime);
+    masterGain.gain.linearRampToValueAtTime(0.07, AC.currentTime+4);
+  }, 0);
+}
+
+// Called when session starts to schedule the long progressive fade-out
+function ambScheduleFade(totalMs){
+  if(!AC || currentSound==='off') return;
+  const now=AC.currentTime;
+  const holdUntil=now + (totalMs * 0.5 / 1000); // hold full volume for first half
+  const fadeEnd  =now + (totalMs / 1000) + 2;    // reach 0 just after session ends
+  masterGain.gain.cancelScheduledValues(now);
+  masterGain.gain.setValueAtTime(0, now);
+  masterGain.gain.linearRampToValueAtTime(0.07, now+4);        // fade in
+  masterGain.gain.setValueAtTime(0.07, holdUntil);             // hold
+  masterGain.gain.linearRampToValueAtTime(0, fadeEnd);         // fade out
+}
+function ambStop(){
+  if(!AC) return;
+  masterGain.gain.cancelScheduledValues(AC.currentTime);
+  masterGain.gain.linearRampToValueAtTime(0,AC.currentTime+3);
+  ambOn=false; audioDot.classList.remove('on');
+}
+audioDot.addEventListener('click',()=>ambOn?ambStop():ambStart());
+
+// Sound selector
+document.querySelectorAll('.sound-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.sound-btn').forEach(b=>b.classList.remove('sel'));
+    btn.classList.add('sel');
+    currentSound=btn.dataset.sound;
+    if(ambOn){ ambStop(); setTimeout(ambStart,400); }
+  });
+});
+
+
+/* ══════════════════════════════
+   VOICE ENGINE
+   speakNow() — synchronous with
+   user gesture (for intro).
+   speak()    — sequential queue.
+══════════════════════════════ */
+let _q=[], _busy=false;
+
+function _mkU(text){
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='fr-FR'; u.rate=0.78; u.pitch=1.0; u.volume=1.0;
+  return u;
+}
+function _drain(){
+  if(!_q.length){_busy=false;return;}
+  _busy=true;
+  const u=_mkU(_q.shift());
+  u.onend=_drain; u.onerror=_drain;
+  speechSynthesis.speak(u);
+}
+function speak(t){ if(!window.speechSynthesis)return; _q.push(t); if(!_busy)_drain(); }
+
+function speakNow(text, onDone){
+  if(!window.speechSynthesis){ onDone&&onDone(); return; }
+  // iOS Safari bug: cancel() + speak() in same frame = silence.
+  // Fix: cancel, then speak in next tick. Still within gesture context on iOS 16+.
+  speechSynthesis.cancel();
+  _q=[]; _busy=false;
+  setTimeout(()=>{
+    const u=_mkU(text);
+    u.onend =()=>{ _busy=false; onDone&&onDone(); };
+    u.onerror=()=>{ _busy=false; onDone&&onDone(); };
+    _busy=true;
+    speechSynthesis.speak(u);
+  }, 50); // 50ms — enough for cancel to flush, still imperceptible
+}
+function silenceAll(){ _q=[]; _busy=false; if(window.speechSynthesis)speechSynthesis.cancel(); }
+
+// Phrase pools — rich, relaxing, no pressure
+const POOL={
+  inhale:[
+    'Inspire','Inspire doucement','Inspire lentement',
+    'Inspire…','Laisse l\'air entrer',
+  ],
+  exhale:[
+    'Expire lentement','Expire… relâche','Expire doucement',
+    'Laisse sortir…','Relâche tout','Souffle dehors…',
+  ],
+  sink:[
+    'Laisse ton corps s\'enfoncer','Relâche complètement',
+    'Tu n\'as rien à faire','Laisse les pensées passer',
+    'Ton corps se détend','Abandonne le contrôle',
+    'Le sommeil arrive','Laisse aller…',
+  ],
+  hold:['Retiens…','Retiens l\'air…'],
+};
+const PIDX={inhale:0,exhale:0,sink:0,hold:0};
+function next(p){ const a=POOL[p]; return a[(PIDX[p]++)%a.length]; }
+function resetPools(){ Object.keys(PIDX).forEach(k=>PIDX[k]=0); }
+
+
+/* ══════════════════════════════
+   PHASE DEFINITIONS
+══════════════════════════════ */
+
+// ── MODE 1: Full sleep protocol (4 phases) ──
+const PHASES_FULL=[
+  {
+    tag:'Phase 1 · 1 min', name:'Soupir cyclique',
+    dur:60000, inh:1800, hld:0, exh:1600, pau:600,
+    showCount:false, isFade:false, sinkEvery:0,
+    transVoice:null,
+    barLabel:'Reset',
+  },
+  {
+    tag:'Phase 2 · 5 min', name:'Respiration profonde',
+    dur:300000, inh:4000, hld:0, exh:6000, pau:800,
+    showCount:false, isFade:false, sinkEvery:4,
+    transVoice:'Bien. Ralentis maintenant. Respire plus profondément.',
+    barLabel:'Calme',
+  },
+  {
+    tag:'Phase 3 · 3 min', name:'Lâcher prise',
+    dur:180000, inh:4000, hld:0, exh:6000, pau:800,
+    showCount:true, isFade:false, sinkEvery:0,
+    transVoice:'Concentre-toi uniquement sur les chiffres. Laisse les pensées partir.',
+    barLabel:'Focus',
+  },
+  {
+    tag:'Phase 4 · final', name:'Vers le sommeil…',
+    dur:90000, inh:5000, hld:0, exh:8000, pau:1500,
+    showCount:false, isFade:true, sinkEvery:0,
+    transVoice:null,
+    barLabel:'Sommeil',
+  },
+];
+
+// ── MODE 2: Night waking — gentle re-sleep (3 phases, no reset) ──
+const PHASES_NIGHT=[
+  {
+    tag:'1 · 3 min', name:'Respiration douce',
+    dur:180000, inh:4000, hld:0, exh:6000, pau:800,
+    showCount:false, isFade:false, sinkEvery:3,
+    transVoice:null,
+    barLabel:'Douce',
+  },
+  {
+    tag:'2 · 3 min', name:'Lâcher prise',
+    dur:180000, inh:4000, hld:0, exh:6000, pau:1000,
+    showCount:true, isFade:false, sinkEvery:0,
+    transVoice:'Laisse les chiffres occuper ton esprit. Rien d\'autre.',
+    barLabel:'Focus',
+  },
+  {
+    tag:'3 · final', name:'Vers le sommeil…',
+    dur:120000, inh:5000, hld:0, exh:9000, pau:2000,
+    showCount:false, isFade:true, sinkEvery:0,
+    transVoice:null,
+    barLabel:'Sommeil',
+  },
+];
+
+
+/* ══════════════════════════════
+   DOM REFS
+══════════════════════════════ */
+const ORB    =document.getElementById('orb');
+const ORB_LBL=document.getElementById('orbLbl');
+const INSTR  =document.getElementById('instr');
+const PH_TAG =document.getElementById('phaseTag');
+const PH_NAME=document.getElementById('phaseName');
+const BIG_N  =document.getElementById('big-count');
+const DIMMER =document.getElementById('dimmer');
+const PROG_B =document.getElementById('progBars');
+const PROG_L =document.getElementById('progLabels');
+
+
+/* ══════════════════════════════
+   ORB ANIMATION
+══════════════════════════════ */
+function orbInhale(ph){
+  ORB.style.transition=`transform ${ph.inh}ms cubic-bezier(.33,0,.2,1),box-shadow ${ph.inh}ms ease`;
+  ORB.style.transform='scale(1.36)';
+  ORB.style.boxShadow='0 0 0 22px rgba(80,120,220,.08),0 0 80px rgba(60,100,200,.36)';
+  ORB_LBL.textContent='inspire';
+}
+function orbExhale(ph){
+  ORB.style.transition=`transform ${ph.exh}ms cubic-bezier(.33,0,.2,1),box-shadow ${ph.exh}ms ease`;
+  ORB.style.transform='scale(0.84)';
+  ORB.style.boxShadow='0 0 0 0px rgba(80,120,220,0),0 0 18px rgba(60,100,200,.12)';
+  ORB_LBL.textContent='expire';
+}
+
+
+/* ══════════════════════════════
+   BUILD PROGRESS BAR (dynamic)
+══════════════════════════════ */
+function buildProgressBar(phases){
+  PROG_B.innerHTML=''; PROG_L.innerHTML='';
+  phases.forEach((ph,i)=>{
+    const bar=document.createElement('div'); bar.className='prog-bar'; bar.id=`pb${i}`;
+    const fill=document.createElement('div'); fill.className='prog-fill'; fill.id=`pf${i}`;
+    bar.appendChild(fill); PROG_B.appendChild(bar);
+    const lbl=document.createElement('div'); lbl.className='prog-lbl'; lbl.id=`pl${i}`;
+    lbl.textContent=ph.barLabel; PROG_L.appendChild(lbl);
+  });
+}
+function activateBar(idx, total){
+  for(let i=0;i<total;i++){
+    document.getElementById(`pb${i}`).classList.remove('active','done');
+    document.getElementById(`pl${i}`).classList.remove('active');
+    if(i<idx){
+      document.getElementById(`pb${i}`).classList.add('done');
+      document.getElementById(`pf${i}`).style.width='100%';
+    }
+  }
+  document.getElementById(`pb${idx}`).classList.add('active');
+  document.getElementById(`pl${idx}`).classList.add('active');
+}
+
+
+/* ══════════════════════════════
+   SESSION STATE
+══════════════════════════════ */
+let breathTimer=null, progTimer=null, phaseTimeouts=[];
+let cycleCount=0, countNum=1, isRunning=false;
+let activePhases=PHASES_FULL;
+
+
+/* ══════════════════════════════
+   RUN A SINGLE PHASE
+══════════════════════════════ */
+function runPhase(idx){
+  if(breathTimer) clearInterval(breathTimer);
+  if(progTimer)   clearInterval(progTimer);
+
+  const ph=activePhases[idx];
+  const total=ph.inh+ph.hld+ph.exh+ph.pau;
+  cycleCount=0;
+
+  PH_TAG.textContent=ph.tag;
+  PH_NAME.textContent=ph.name;
+  activateBar(idx, activePhases.length);
+
+  if(ph.showCount){
+    countNum=1; BIG_N.textContent=countNum; BIG_N.style.opacity='1';
+  } else {
+    BIG_N.style.opacity='0';
+  }
+
+  if(ph.isFade){
+    starsAlpha=0.10;
+    DIMMER.style.transition='opacity 28s ease'; DIMMER.style.opacity='0.7';
+    INSTR.style.transition='opacity 14s ease'; INSTR.style.opacity='0';
+    PH_NAME.style.transition='opacity 9s ease'; PH_NAME.style.opacity='0.15';
+    ORB.style.transition='opacity 20s ease'; ORB.style.opacity='0.25';
+  } else {
+    starsAlpha=1;
+    DIMMER.style.transition='opacity 2s ease'; DIMMER.style.opacity='0';
+    INSTR.style.transition='opacity .5s'; INSTR.style.opacity='1';
+    PH_NAME.style.transition='opacity 1s'; PH_NAME.style.opacity='1';
+    ORB.style.transition='opacity 1s ease'; ORB.style.opacity='1';
+  }
+
+  const PRE=200; // ms to speak before animation — compensates TTS latency
+
+  function cycle(){
+    cycleCount++;
+    const useSink=(ph.sinkEvery>0 && cycleCount%ph.sinkEvery===0);
+
+    // INHALE — voice PRE ms before orb expands
+    if(!ph.isFade){
+      INSTR.textContent='Inspire…';
+      speak(next('inhale'));
+    }
+    setTimeout(()=>{ orbInhale(ph); }, PRE);
+
+    // HOLD — at exact transition (no pre-fire needed)
+    if(ph.hld>0){
+      setTimeout(()=>{
+        if(!ph.isFade){ INSTR.textContent='Retiens…'; speak(next('hold')); }
+      }, ph.inh);
+    }
+
+    // EXHALE — voice PRE ms before orb contracts
+    const exhaleAt=ph.inh+ph.hld;
+    setTimeout(()=>{
+      if(ph.showCount){
+        BIG_N.textContent=countNum;
+        INSTR.textContent='';
+        speak(String(countNum));
+        countNum++; if(countNum>400) countNum=1;
+        setTimeout(()=>{ orbExhale(ph); }, PRE);
+      } else if(!ph.isFade){
+        INSTR.textContent=useSink ? 'Relâche…' : 'Expire…';
+        speak(useSink ? next('sink') : next('exhale'));
+        setTimeout(()=>{ orbExhale(ph); }, PRE);
+      } else {
+        orbExhale(ph); // fade phase: no voice, animate immediately
+      }
+    }, exhaleAt);
+  }
+
+  cycle();
+  breathTimer=setInterval(cycle, total);
+
+  // fill bar
+  const fill=document.getElementById(`pf${idx}`);
+  fill.style.width='0%';
+  let elapsed=0;
+  progTimer=setInterval(()=>{
+    elapsed+=500;
+    fill.style.width=Math.min((elapsed/ph.dur)*100,100)+'%';
+  },500);
+}
+
+
+/* ══════════════════════════════
+   SCHEDULE PHASE TRANSITIONS
+══════════════════════════════ */
+function schedulePhases(){
+  let delay=0;
+  activePhases.forEach((ph,i)=>{
+    delay+=ph.dur;
+    if(i+1 < activePhases.length){
+      const nph=activePhases[i+1];
+      phaseTimeouts.push(setTimeout(()=>{
+        silenceAll();
+        if(nph.transVoice){
+          speak(nph.transVoice);
+          phaseTimeouts.push(setTimeout(()=>runPhase(i+1), 3400));
+        } else {
+          runPhase(i+1);
+        }
+      }, delay));
+    } else {
+      phaseTimeouts.push(setTimeout(endSession, delay));
+    }
+  });
+}
+
+
+/* ══════════════════════════════
+   START SESSION (common)
+   Called inside click handler →
+   gesture context preserved.
+══════════════════════════════ */
+function startSession(introText){
+  if(isRunning) return;
+  isRunning=true;
+  phaseTimeouts.forEach(clearTimeout); phaseTimeouts=[];
+  resetPools();
+  buildProgressBar(activePhases);
+
+  show('s-breathe');
+
+  // iOS: AudioContext MUST be created/resumed synchronously in gesture tick
+  ambStart();
+
+  // iOS: speechSynthesis needs a "warm-up" speak in gesture context
+  // We do this before speakNow so the engine is ready
+  if(window.speechSynthesis){
+    // Kick the engine with a silent utterance if not yet warmed
+    speechSynthesis.cancel();
+  }
+
+  // Wake lock via .then() — non-blocking, doesn't affect gesture context
+  acquireWakeLock();
+
+  let launched=false;
+  const fallback=setTimeout(()=>{ if(!launched) go(); }, 8000);
+  phaseTimeouts.push(fallback);
+
+  function go(){
+    if(launched) return;
+    launched=true; clearTimeout(fallback);
+    runPhase(0);
+    schedulePhases();
+    const totalMs=activePhases.reduce((s,p)=>s+p.dur,0);
+    ambScheduleFade(totalMs);
+  }
+
+  // INTRO voice — 50ms tick inside speakNow handles iOS cancel+speak bug
+  speakNow(introText, ()=>{
+    setTimeout(()=>{
+      speak('Si ton esprit s\'échappe, reviens simplement à la respiration.');
+      phaseTimeouts.push(setTimeout(go, 4500));
+    }, 600);
+  });
+}
+
+
+/* ══════════════════════════════
+   TWO ENTRY POINTS
+══════════════════════════════ */
+function startFull(){
+  activePhases=PHASES_FULL;
+  startSession('Laisse ton écran allumé… pose ton téléphone… ferme les yeux… tu n\'as rien à faire… laisse-toi guider.');
+}
+
+function startNight(){
+  activePhases=PHASES_NIGHT;
+  startSession('Laisse ton écran allumé… pose ton téléphone… ferme les yeux… le sommeil va revenir.');
+}
+
+
+/* ══════════════════════════════
+   STOP / END
+══════════════════════════════ */
+function stopAll(){
+  isRunning=false;
+  releaseWakeLock();
+  if(breathTimer) clearInterval(breathTimer);
+  if(progTimer)   clearInterval(progTimer);
+  phaseTimeouts.forEach(clearTimeout); phaseTimeouts=[];
+  silenceAll(); ambStop();
+  starsAlpha=1;
+  DIMMER.style.transition='opacity 1s'; DIMMER.style.opacity='0';
+  BIG_N.style.opacity='0';
+  ORB.style.opacity='1'; ORB.style.transform='scale(1)'; ORB.style.boxShadow='';
+  INSTR.style.opacity='1'; PH_NAME.style.opacity='1';
+}
+function endSession(){ stopAll(); show('s-end'); }
+
+
+/* ══════════════════════════════
+   WAKE LOCK
+══════════════════════════════ */
+let wakeLock=null;
+function acquireWakeLock(){
+  if(!('wakeLock' in navigator)) return;
+  // .then() instead of await — never blocks the gesture context
+  navigator.wakeLock.request('screen')
+    .then(wl=>{ wakeLock=wl; wl.addEventListener('release',()=>{ wakeLock=null; }); })
+    .catch(()=>{});
+}
+function releaseWakeLock(){
+  if(wakeLock){ wakeLock.release().catch(()=>{}); wakeLock=null; }
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && isRunning) acquireWakeLock();
+});
+document.getElementById('btnStart').addEventListener('click', startFull);
+document.getElementById('btnNight').addEventListener('click', startNight);
+document.getElementById('btnStop').addEventListener('click',  ()=>{ stopAll(); show('s-home'); });
+document.getElementById('btnRestart').addEventListener('click',()=>{ isRunning=false; startFull(); });
+
+// Show wake lock hint only if API unavailable
+if(!('wakeLock' in navigator)){
+  document.getElementById('wakeLockHint').style.display='block';
+}
+
+// Voice test — must be in click handler
+const voiceStatus=document.getElementById('voiceStatus');
+document.getElementById('btnVoiceTest').addEventListener('click',()=>{
+  voiceStatus.style.opacity='0';
+  speakNow('Test vocal réussi', ()=>{
+    voiceStatus.textContent='✓ Voix opérationnelle';
+    voiceStatus.style.opacity='1';
+    setTimeout(()=>{ voiceStatus.style.opacity='0'; },3000);
+  });
+});
+
+document.getElementById('btnEbook').addEventListener('click',  ()=>{ document.getElementById('s-ebook').scrollTop=0; show('s-ebook'); });
+document.getElementById('btnEbook2').addEventListener('click', ()=>{ document.getElementById('s-ebook').scrollTop=0; show('s-ebook'); });
+document.getElementById('btnBack').addEventListener('click',   ()=>show('s-home'));
+</script>
+</body>
+</html>
